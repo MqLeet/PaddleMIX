@@ -36,40 +36,9 @@ python paddlemix/examples/GOT_OCR_2_0/got_ocr2_0_infer.py \
   --ocr_type format \
 ```
 
-### 3.3. fine-grained OCR:
+## 4 训练
 ```bash
-python paddlemix/examples/GOT_OCR_2_0/got_ocr2_0_infer.py \
-  --model_name_or_path stepfun-ai/GOT-OCR2_0 \
-  --image_file paddlemix/demo_images/hospital.jpeg \
-  --ocr_type ocr \
-  --box [x1,y1,x2,y2] \
-```
-
-```bash
-python paddlemix/examples/GOT_OCR_2_0/got_ocr2_0_infer.py \
-  --model_name_or_path stepfun-ai/GOT-OCR2_0 \
-  --image_file paddlemix/demo_images/hospital.jpeg \
-  --ocr_type ocr \
-  --color red \
-```
-
-### 3.4. multi-crop OCR:
-```bash
-python paddlemix/examples/GOT_OCR_2_0/got_ocr2_0_infer.py \
-  --model_name_or_path stepfun-ai/GOT-OCR2_0 \
-  --image_file paddlemix/demo_images/hospital.jpeg \
-  --multi_crop \
-  --ocr_type ocr \
-```
-
-```bash
-# render the formatted OCR results:
-python paddlemix/examples/GOT_OCR_2_0/got_ocr2_0_infer.py \
-  --model_name_or_path stepfun-ai/GOT-OCR2_0 \
-  --image_file paddlemix/demo_images/hospital.jpeg \
-  --multi_crop \
-  --ocr_type ocr \
-  --render \
+sh paddlemix/examples/GOT_OCR_2_0/run_train.sh
 ```
 
 
