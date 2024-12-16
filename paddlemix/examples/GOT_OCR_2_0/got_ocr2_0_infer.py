@@ -13,38 +13,25 @@
 # limitations under the License.
 
 import argparse
-
 import paddle
 from paddlenlp.transformers import QWenTokenizer
-
-from paddlemix.models.GOT.model import GOTQwenForCausalLM
+from paddlemix.models.GOT.GOT_ocr_2_0 import GOTQwenForCausalLM
 
 parser = argparse.ArgumentParser()
-
-parser.add_argument("--model_name_or_path", type=str, default="GOT-OCR2_0_pd", help="pretrained ckpt and tokenizer")
-parser.add_argument("--image_file", type=str, default="yiyuan.jpeg")
+parser.add_argument("--model_name_or_path", type=str, default="stepfun-ai/GOT-OCR2_0", help="pretrained ckpt and tokenizer")
+parser.add_argument("--image_file", type=str, default="paddlemix/demo_images/hospital.jpeg")
 parser.add_argument("--multi_crop", action="store_true")
 parser.add_argument("--ocr_type", type=str, default="plain", choices=["ocr", "format"])
 parser.add_argument("--box", type=str, default="")
 parser.add_argument("--color", type=str, default="")
 parser.add_argument("--render", action="store_true")
-
 args = parser.parse_args()
 model_name_or_path = args.model_name_or_path
 
 tokenizer = QWenTokenizer.from_pretrained(model_name_or_path)
-# print('tokenizer:\n', tokenizer)
-# print('tokenizer.added_tokens_encoder:\n', tokenizer.added_tokens_encoder)
-# print('tokenizer.added_tokens_decoder:\n', tokenizer.added_tokens_decoder)
-# PretrainedTokenizer(name_or_path='',
-# vocab_size=151851, model_max_len=8000, padding_side='right',
-# truncation_side='right', special_tokens={
-# 'pad_token': AddedToken("<|endoftext|>", rstrip=False, lstrip=False, single_word=False, normalized=False, special=False)})
 model = GOTQwenForCausalLM.from_pretrained(
     model_name_or_path, dtype=paddle.bfloat16, pad_token_id=tokenizer.eos_token_id
 ).eval()
-# print('tokenizer:\n', tokenizer)
-
 
 # input test image
 image_file = args.image_file

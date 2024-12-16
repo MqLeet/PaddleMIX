@@ -1,6 +1,6 @@
 {
   "synthdog_en": {
-    "images": "playground/data/synthdog-en/",
-    "annotations": "playground/opensource/synthdog_en.jsonl"
+    "images": "synthdog_en/",
+    "annotations": "synthdog_en/synthdog_en_29765_ocr_1k.json"
   }
 }

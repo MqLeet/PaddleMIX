@@ -2,51 +2,76 @@
 
 ## 1. 模型介绍
 
-[GOT-OCR2.0](https://qwenlm.github.io/blog/qwen2-vl/) 是大规模视觉语言模型。可以以图像、文本、检测框、视频作为输入，并以文本和检测框作为输出。本仓库提供paddle版本的`GOT-OCR2.0`模型。
+[GOT-OCR2.0](https://arxiv.org/abs/2409.01704)是一款极具突破性的通用OCR模型，旨在解决传统OCR系统（OCR-1.0）和当前大规模视觉语言模型（LVLMs）在OCR任务中的局限性。本仓库提供paddle版本的`GOT-OCR2.0`模型。
 
 
-## 2 环境准备
+## 2. 环境要求
 - **python >= 3.10**
-- **paddlepaddle-gpu 要求版本develop**
+- **paddlepaddle-gpu 要求3.0.0b2或版本develop**
 ```
-# 安装示例
+# develop版安装示例
 python -m pip install paddlepaddle-gpu==0.0.0.post118 -f https://www.paddlepaddle.org.cn/whl/linux/gpu/develop.html
 ```
 
-- paddlenlp >= 3.0.0(默认开启flash_attn，推荐源码编译安装)
+- **paddlenlp == 3.0.0b2**
 
-> 注：
-* 请确保安装了以上依赖，否则无法运行。同时，需要安装 paddlemix/external_ops 下的自定义OP, `python setup.py install`。如果安装后仍然找不到算子，需要额外设置PYTHONPATH
+> 注：(默认开启flash_attn)使用flash_attn 要求A100/A800显卡或者H20显卡。V100请用float16推理。
+
 
 ## 3 推理预测
 
-1. plain texts OCR:
+### 3.1. plain texts OCR:
 ```bash
-python paddlemix/examples/GOT_OCR_2_0/got_ocr2_0_infer.py --model_name_or_path  /GOT_weights/  --image_file  /an/image/file.png  --ocr_type ocr
+python paddlemix/examples/GOT_OCR_2_0/got_ocr2_0_infer.py \
+  --model_name_or_path stepfun-ai/GOT-OCR2_0 \
+  --image_file paddlemix/demo_images/hospital.jpeg \
+  --ocr_type ocr \
 ```
 
-2. format texts OCR:
+### 3.2. format texts OCR:
 ```bash
-python paddlemix/examples/GOT_OCR_2_0/got_ocr2_0_infer.py --model_name_or_path  /GOT_weights/  --image_file  /an/image/file.png  --ocr_type format
+python paddlemix/examples/GOT_OCR_2_0/got_ocr2_0_infer.py \
+  --model_name_or_path stepfun-ai/GOT-OCR2_0 \
+  --image_file paddlemix/demo_images/hospital.jpeg \
+  --ocr_type format \
 ```
 
-3. fine-grained OCR:
+### 3.3. fine-grained OCR:
 ```bash
-python paddlemix/examples/GOT_OCR_2_0/got_ocr2_0_infer.py --model_name_or_path  /GOT_weights/  --image_file  /an/image/file.png  --ocr_type format/ocr --box [x1,y1,x2,y2]
-```
-```bash
-python paddlemix/examples/GOT_OCR_2_0/got_ocr2_0_infer.py --model_name_or_path  /GOT_weights/  --image_file  /an/image/file.png  --ocr_type format/ocr --color red/green/blue
-```
-
-4. multi-crop OCR:
-```bash
-python paddlemix/examples/GOT_OCR_2_0/got_ocr2_0_infer.py --model_name_or_path  /GOT_weights/  --image_file  /an/image/file.png  --multi_crop --ocr_type format/ocr
+python paddlemix/examples/GOT_OCR_2_0/got_ocr2_0_infer.py \
+  --model_name_or_path stepfun-ai/GOT-OCR2_0 \
+  --image_file paddlemix/demo_images/hospital.jpeg \
+  --ocr_type ocr \
+  --box [x1,y1,x2,y2] \
 ```
 
-4. render the formatted OCR results:
 ```bash
-python paddlemix/examples/GOT_OCR_2_0/got_ocr2_0_infer.py --model_name_or_path  /GOT_weights/  --image_file  /an/image/file.png --ocr_type format --render
+python paddlemix/examples/GOT_OCR_2_0/got_ocr2_0_infer.py \
+  --model_name_or_path stepfun-ai/GOT-OCR2_0 \
+  --image_file paddlemix/demo_images/hospital.jpeg \
+  --ocr_type ocr \
+  --color red \
 ```
+
+### 3.4. multi-crop OCR:
+```bash
+python paddlemix/examples/GOT_OCR_2_0/got_ocr2_0_infer.py \
+  --model_name_or_path stepfun-ai/GOT-OCR2_0 \
+  --image_file paddlemix/demo_images/hospital.jpeg \
+  --multi_crop \
+  --ocr_type ocr \
+```
+
+```bash
+# render the formatted OCR results:
+python paddlemix/examples/GOT_OCR_2_0/got_ocr2_0_infer.py \
+  --model_name_or_path stepfun-ai/GOT-OCR2_0 \
+  --image_file paddlemix/demo_images/hospital.jpeg \
+  --multi_crop \
+  --ocr_type ocr \
+  --render \
+```
+
 
 ## 参考文献
 ```BibTeX

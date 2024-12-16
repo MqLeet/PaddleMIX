@@ -13,15 +13,12 @@
 # limitations under the License.
 
 from io import BytesIO
-from typing import List, Optional  # , Tuple, Union
+from typing import List, Optional
 
 import paddle
 import paddle.nn as nn
-
-# import paddle.nn.functional as F
-# import paddlenlp
 import requests
-from paddlenlp.generation.stopping_criteria import (  # , TextStreamer; StoppingCriteria,
+from paddlenlp.generation.stopping_criteria import (
     StoppingCriteriaList,
 )
 from paddlenlp.transformers import Qwen2Config, Qwen2ForCausalLM, Qwen2Model
@@ -34,11 +31,10 @@ DEFAULT_IM_START_TOKEN = "<img>"
 DEFAULT_IM_END_TOKEN = "</img>"
 
 import dataclasses
-
+from enum import Enum, auto
 from paddle.vision import transforms
-
-from .plug.blip_process import BlipImageEvalProcessor
-from .vision_encoder.got_vision_b import build_GOT_vit_b
+from ...processors.got_process import BlipImageEvalProcessor
+from .got_vision_b import build_GOT_vit_b
 
 
 class Qwen2LMHead(nn.Layer):
@@ -67,9 +63,6 @@ class Qwen2LMHead(nn.Layer):
     def forward(self, hidden_states, tensor_parallel_output=1):
         logits = paddle.matmul(hidden_states, self.weight, transpose_y=self.transpose_y)
         return logits
-
-
-from enum import Enum, auto
 
 
 class SeparatorStyle(Enum):
@@ -423,13 +416,14 @@ class GOTQwenForCausalLM(Qwen2ForCausalLM):
             shift_logits = logits[..., :-1, :]
             shift_labels = labels[..., 1:]
             # Flatten the tokens
-            # loss_fct = nn.CrossEntropyLoss()
+            #loss_fct = nn.CrossEntropyLoss()
             loss_fct = nn.CrossEntropyLoss(reduction="sum")
             shift_logits = shift_logits.reshape([-1, self.config.vocab_size])
             shift_labels = shift_labels.reshape([-1])
             # Enable model parallelism
+
             loss = loss_fct(shift_logits, shift_labels)
-            label_sum = paddle.sum(shift_labels != -100).cast("float32")
+            label_sum = paddle.sum(shift_labels != -100) #.cast("float32")
             loss = loss / label_sum
 
         if not return_dict:

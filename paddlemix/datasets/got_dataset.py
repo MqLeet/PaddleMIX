@@ -13,31 +13,25 @@
 # limitations under the License.
 
 import copy
-
-# import io
 import json
 import logging
-
-# import os
 import random
-
-# from typing import Dict, List, Optional, Sequence, Tuple, Union
 from typing import Dict
-
 import paddle
+from paddle import Tensor
+import paddlenlp
 from PIL import Image, ImageFile
-
 ImageFile.LOAD_TRUNCATED_IMAGES = True
-
-from megfile import smart_glob
-from natsort import natsorted
-
-# from ..utils.constants import CONVERSATION_DATA
-from ..utils.conversation import (  # conv_templates,; default_conversation,
+from ..models.GOT.utils.conversation import (
     SeparatorStyle,
     conv_mpt,
 )
-from .base_dataset import BaseDataset
+from dataclasses import dataclass
+from functools import partial
+from typing import List, Union
+from megfile import smart_glob
+from natsort import natsorted
+
 
 IGNORE_INDEX = -100
 CONTROLLER_HEART_BEAT_EXPIRATION = 30
@@ -59,6 +53,30 @@ DEFAULT_IMAGE_PATCH_TOKEN = "<imgpad>"
 
 DEFAULT_IM_START_TOKEN = "<img>"
 DEFAULT_IM_END_TOKEN = "</img>"
+
+
+class BaseDataset(paddle.io.Dataset):
+    def __init__(self, datasets: str, tokenizer: paddlenlp.transformers.PretrainedTokenizer, multimodal_cfg: dict):
+        super(BaseDataset, self).__init__()
+        self.tokenizer = tokenizer
+        self.multimodal_cfg = multimodal_cfg
+
+        logging.warning(f"Using {multimodal_cfg['image_token_len']} tokens for representing image")
+
+    def image_processor(self, image):
+        # processor = self.multimodal_cfg['image_processor']  # the first processor, usually is the clip pretrained model (vit)
+        processor_high = self.multimodal_cfg[
+            "image_processor_high"
+        ]  # the second processor, usually is the designed image encoder (sam/swin/cnn)
+        image_high = image.copy()
+        image_high = processor_high(image_high)
+        return image_high
+
+    def __len__(self):
+        return len(self.list_data_dict)
+
+    def __getitem__(self, i) -> Dict[str, paddle.Tensor]:
+        pass
 
 
 class ConversationDataset(BaseDataset):
@@ -83,29 +101,30 @@ class ConversationDataset(BaseDataset):
         # for name_all in datasets.split("+"):
         #    for name in got_data_dict[name_all]:
         ds_collections = json.loads(open(meta_path).read())
+        #ds_collections = json.load(open(meta_path, 'r'))
         for ds_idx, ds_name in enumerate(ds_collections.keys()):
-            if 1:
-                # dataset = CONVERSATION_DATA[ds_name]
-                dataset = ds_collections[ds_name]
+            # dataset = CONVERSATION_DATA[ds_name]
+            dataset = ds_collections[ds_name]
 
-                data_path = dataset["annotations"]
-                if data_path.endswith(".json"):
-                    data = json.load(open(data_path, "r"))
-                elif data_path.endswith(".jsonl"):
-                    with open(data_path, "r") as f:
-                        data = f.readlines()
-                        for ii in range(len(data)):
-                            data[ii] = json.loads(data[ii])
-                else:
-                    raise ValueError(f"Unknown file extension: {data_path}")
+            data_path = dataset["annotations"]
+            #image_root = dataset["images"]
+            if data_path.endswith(".json"):
+                data = json.load(open(data_path, "r"))
+            elif data_path.endswith(".jsonl"):
+                with open(data_path, "r") as f:
+                    data = f.readlines()
+                    for ii in range(len(data)):
+                        data[ii] = json.loads(data[ii])
+            else:
+                raise ValueError(f"Unknown file extension: {data_path}")
 
-                list_data_dict.extend(data)
+            list_data_dict.extend(data)
 
-                image_path = dataset["images"]  # image_root
+            image_path = dataset["images"]  # image_root
 
-                list_image_path.extend([image_path] * len(data))
+            list_image_path.extend([image_path] * len(data))
 
-                logging.warning(f"Data from {data_path} provide {len(data)} conversations.")
+            logging.warning(f"Data from {data_path} provide {len(data)} conversations.")
 
         assert len(list_data_dict) == len(list_image_path)
         logging.warning(f"{len(list_data_dict)} conversations in total.")
@@ -116,9 +135,7 @@ class ConversationDataset(BaseDataset):
         self.list_image_path = list_image_path_new
 
         self.im_patch_token = 151859
-
         self.im_start_token = 151857
-
         self.im_end_token = 151858
 
     def multimodal_processor(self, sources, flag_num_patches):
@@ -327,3 +344,96 @@ class ConversationDataset(BaseDataset):
             data_dict["image"] = [paddle.zeros([3, 1024, 1024])]
             data_dict["image_high"] = [paddle.zeros([3, 1024, 1024])]
         return data_dict
+
+
+# helpers
+def pad_sequence_paddle(sequences, padding_value=0):
+    """
+    Implement a function similar to PyTorch's pad_sequence in PaddlePaddle.
+
+    Args:
+    - sequences (list of Tensor): The list of sequences to be padded.
+    - padding_value (float, optional): The value used for padding, default is 0.
+
+    Returns:
+    - Tensor: The result of padding all sequences to the same length.
+    """
+    # Calculate the maximum length
+    max_len = max([seq.shape[0] for seq in sequences])
+
+    # Pad sequences
+    padded_sequences = []
+    for seq in sequences:
+        # Calculate the length to pad
+        padding_len = max_len - seq.shape[0]
+
+        # Create a padding tensor
+        if padding_len > 0:
+            padding_tensor = paddle.full([padding_len] + list(seq.shape[1:]), padding_value, dtype=seq.dtype)
+            # Concatenate the original sequence and the padding tensor
+            padded_seq = paddle.concat([seq, padding_tensor], axis=0)
+        else:
+            padded_seq = seq
+
+        padded_sequences.append(padded_seq)
+
+    # Stack the padded sequences to form a batch
+    padded_batch = paddle.stack(padded_sequences, axis=0)
+    return padded_batch
+
+
+def orig_pad_sequence(
+    sequences: Union[Tensor, List[Tensor]],
+    batch_first: bool = False,
+    padding_value: float = 0.0,
+) -> Tensor:
+    if batch_first:
+        return pad_sequence_paddle(sequences, padding_value)
+    else:
+        assert False, "Not implemented"
+
+
+@dataclass
+class DataCollatorForSupervisedDataset(object):
+    tokenizer: paddlenlp.transformers.PretrainedTokenizer
+
+    def __call__(self, instances):
+        input_ids, labels = tuple([instance[key] for instance in instances] for key in ("input_ids", "labels"))
+        images = [paddle.stack(instance["image"]) for instance in instances]
+        images_high = [paddle.stack(instance["image_high"]) for instance in instances]
+        images = list(zip(images, images_high))
+
+        pad_sequence = partial(orig_pad_sequence, batch_first=True)
+
+        input_ids = pad_sequence(input_ids, batch_first=True, padding_value=self.tokenizer.pad_token_id)
+
+        labels = pad_sequence(labels, batch_first=True, padding_value=IGNORE_INDEX)
+
+        batch = dict(
+            input_ids=input_ids,
+            labels=labels,
+            attention_mask=input_ids.not_equal(paddle.to_tensor(self.tokenizer.pad_token_id)),
+            images=images,
+        )
+        return batch
+
+
+def make_supervised_data_module(interleave, with_box, tokenizer, data_args):
+    assert data_args.conversation_version == "mpt"
+
+    train_dataset = ConversationDataset(
+        tokenizer=tokenizer,
+        # datasets=data_args.datasets,
+        meta_path=data_args.meta_path,
+        multimodal_cfg=dict(
+            sep_image_conv_front=data_args.sep_image_conv_front,
+            image_token_len=data_args.image_token_len,
+            image_aspect_ratio=data_args.image_aspect_ratio,
+            use_im_start_end=data_args.use_im_start_end,
+            image_processor=data_args.image_processor,
+            image_processor_high=data_args.image_processor_high,
+            box_limit=data_args.box_limit,
+        ),
+    )
+    data_collator = DataCollatorForSupervisedDataset(tokenizer=tokenizer)
+    return dict(train_dataset=train_dataset, eval_dataset=None, data_collator=data_collator)

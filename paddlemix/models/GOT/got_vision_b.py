@@ -12,38 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# import math
 from functools import partial
 from typing import Optional, Tuple, Type
 
 import paddle
 import paddle.nn as nn
 import paddle.nn.functional as F
-
-# class Projector(paddle.nn.Layer):
-
-#     def __init__(
-#         self,
-#         width: 256,
-#         n_queries: int = 256,
-#         output_dim: int = 4096,
-#         **kwargs
-#     ):
-#         super().__init__()
-
-#         norm_layer = partial(paddle.nn.LayerNorm, epsilon=1e-06)
-#         self.attn_pool = Resampler(grid_size=int(math.sqrt(n_queries)),
-#             embed_dim=output_dim, num_heads=output_dim // 128, kv_dim=width,
-#             norm_layer=norm_layer)
-#         self.ln_post = norm_layer(output_dim)
-#         self.proj = paddle.base.framework.EagerParamBase.from_tensor(tensor
-#             =output_dim ** -0.5 * paddle.randn(shape=[output_dim, output_dim]))
-
-#     def forward(self, x: paddle.Tensor):
-#         x = self.attn_pool(x)
-#         x = self.ln_post(x)
-#         x = x @ self.proj
-#         return x
 
 
 class MLPBlock(paddle.nn.Layer):
@@ -224,6 +198,7 @@ class Block(paddle.nn.Layer):
 
     def forward(self, x: paddle.Tensor) -> paddle.Tensor:
         shortcut = x
+        # import pdb; pdb.set_trace()
         x = self.norm1(x)
         # Window partition
         if self.window_size > 0:
@@ -288,7 +263,7 @@ class Attention(paddle.nn.Layer):
         # q, k, v with shape (B * nHead, H * W, C)
         q, k, v = qkv.reshape([3, B * self.num_heads, H * W, -1]).unbind(axis=0)
 
-        attn = q * self.scale @ k.transpose([0, 1, 3, 2])  # [-2, -1]
+        attn = (q * self.scale) @ k.transpose([0, 2, 1])  # [-2, -1]
 
         if self.use_rel_pos:
             attn = add_decomposed_rel_pos(attn, q, self.rel_pos_h, self.rel_pos_w, (H, W), (H, W))
@@ -315,12 +290,14 @@ def window_partition(x: paddle.Tensor, window_size: int) -> Tuple[paddle.Tensor,
 
     pad_h = (window_size - H % window_size) % window_size
     pad_w = (window_size - W % window_size) % window_size
+    # x.shape [1, 64, 64, 768]
     if pad_h > 0 or pad_w > 0:
-        x = F.pad(x, pad=(0, 0, 0, pad_w, 0, pad_h), pad_from_left_axis=False)
+        # x = F.pad(x, (0, 0, 0, pad_w, 0, pad_h)) # torch
+        x = F.pad(x, pad=(0, pad_w, 0, pad_h), data_format="NHWC")  # default NCHW
     Hp, Wp = H + pad_h, W + pad_w
 
     x = x.reshape([B, Hp // window_size, window_size, Wp // window_size, window_size, C])
-    windows = x.transpose(perm=[0, 1, 3, 2, 4, 5]).reshape([-1, window_size, window_size, C])
+    windows = x.transpose([0, 1, 3, 2, 4, 5]).reshape([-1, window_size, window_size, C])
     return windows, (Hp, Wp)
 
 
@@ -448,13 +425,12 @@ class PatchEmbed(paddle.nn.Layer):
         return x
 
 
-def build_GOT_vit_b(checkpoint=None):
+def build_GOT_vit_b():
     return _build_GOT_vision(
         encoder_embed_dim=768,
         encoder_depth=12,
         encoder_num_heads=12,
         encoder_global_attn_indexes=[2, 5, 8, 11],
-        checkpoint=checkpoint,
     )
 
 
@@ -463,7 +439,6 @@ def _build_GOT_vision(
     encoder_depth,
     encoder_num_heads,
     encoder_global_attn_indexes,
-    checkpoint=None,
 ):
     prompt_embed_dim = 256
     image_size = 1024

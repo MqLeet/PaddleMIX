@@ -14,7 +14,7 @@
 
 import dataclasses
 from enum import Enum, auto
-from typing import List  # , Tuple
+from typing import List
 
 
 class SeparatorStyle(Enum):
@@ -23,35 +23,6 @@ class SeparatorStyle(Enum):
     SINGLE = auto()
     TWO = auto()
     MPT = auto()
-
-
-# simple_conv_multimodal = Conversation(
-#     system="You are GOT, a large language and vision assistant trained by Foundation Model Group, Megvii Technology."
-#            "You are able to understand the visual content that the user provides, and assist the user with a variety of tasks using natural language."
-#            "Follow the instructions carefully and explain your answers in detail.",
-#     # system="",
-#     roles=("Human", "Assistant"),
-#     messages=(
-#         ("Human", "Hi!"),
-#         ("Assistant", "Hi there!  How can I help you today?\n")
-#     ),
-#     offset=2,
-#     sep_style=SeparatorStyle.SINGLE,
-#     sep="###",
-# )
-
-# conv_mpt = Conversation(
-#     system="""<|im_start|>system
-# - You are a helpful language and vision assistant.
-# - You are able to understand the visual content that the user provides, and assist the user with a variety of tasks using natural language.
-# - You should follow the instructions carefully and explain your answers in detail.""",
-#     roles=("<|im_start|>user\n", "<|im_start|>assistant\n"),
-#     version="mpt",
-#     messages=(),
-#     offset=0,
-#     sep_style=SeparatorStyle.MPT,
-#     sep="<|im_end|>",
-# )
 
 
 @dataclasses.dataclass
@@ -320,18 +291,6 @@ conv_vicuna_v1_1 = Conversation(
     sep2="</s>",
 )
 
-# conv_mpt = Conversation(
-#     system="""<|im_start|>system
-# - You are designed by Megvii(旷视), and your name is GOT.
-# - 你叫GOT, 你来自旷视, 你是旷视开发的。
-# - 你擅长分析表格，仔细读图表中的内容，然后给出你的答案。""",
-#     roles=("<|im_start|>user\n", "<|im_start|>assistant\n"),
-#     version="mpt",
-#     messages=(),
-#     offset=0,
-#     sep_style=SeparatorStyle.MPT,
-#     sep="<|im_end|>",
-# )
 
 conv_mpt = Conversation(
     system="""<|im_start|>system
@@ -379,20 +338,6 @@ conv_bair_v1 = Conversation(
     sep2="</s>",
 )
 
-# simple_conv = Conversation(
-#     system="You are GOT, a large language model trained by Foundation Model Group, Megvii Technology, based on LLaMA architecture."
-#            "You are designed to assist human with a variety of tasks using natural language."
-#            "Follow the instructions carefully.",
-#     roles=("Human", "Assistant"),
-#     messages=(
-#         ("Human", "Hi!"),
-#         ("Assistant", "Hi there!  How can I help you today?\n")
-#     ),
-#     offset=2,
-#     sep_style=SeparatorStyle.SINGLE,
-#     sep="###",
-# )
-
 
 simple_conv = Conversation(
     system="",
@@ -402,6 +347,7 @@ simple_conv = Conversation(
     sep_style=SeparatorStyle.SINGLE,
     sep="###",
 )
+
 
 simple_conv_multimodal = Conversation(
     system="You are GOT, a large language and vision assistant trained by Foundation Model Group, Megvii Technology."
@@ -414,6 +360,7 @@ simple_conv_multimodal = Conversation(
     sep_style=SeparatorStyle.SINGLE,
     sep="###",
 )
+
 
 simple_conv_mpt_multimodal = Conversation(
     system="""<|im_start|>system
@@ -428,6 +375,7 @@ simple_conv_mpt_multimodal = Conversation(
     sep="<|im_end|>",
 )
 
+
 simple_conv_legacy = Conversation(
     system="You are GOT, a large language model trained by Foundation Model Group, Megvii Technology."
     "You are designed to assist human with a variety of tasks using natural language."
@@ -438,6 +386,7 @@ simple_conv_legacy = Conversation(
     sep_style=SeparatorStyle.SINGLE,
     sep="###",
 )
+
 
 conv_llava_v1 = Conversation(
     system="You are GOT, a large language and vision assistant trained by Foundation Model Group, Megvii Technology."
@@ -468,7 +417,3 @@ conv_templates = {
     "mpt": conv_mpt,
     "mpt_text": conv_mpt_text,
 }
-
-
-if __name__ == "__main__":
-    print(default_conversation.get_prompt())
